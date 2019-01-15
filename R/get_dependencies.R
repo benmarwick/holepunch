@@ -1,23 +1,97 @@
-appDependencies <- getFromNamespace("appDependencies", "packrat")
-
-
-#' Get project dependencies
+#' Searches for external packages and adds them to the Imports field in the description
 #'
-#' @param dir Root directory to search from
+#' Scans script files (.R, .Rmd, .Rnw, .Rpres, etc.) for external package dependencies indicated by
+#' \code{library()}, \code{require()} or \code{::} and adds those packages to the Imports field in
+#' the package DESCRIPTION.
 #'
-#' @return vector
-#' @importFrom  packrat status 
-#' @importFrom glue glue
-#' @importFrom utils getFromNamespace
+#' @param path location of individual file or directory where to search for scripts.
+#' @param just_packages just give back a character vector of the found packages.
+#'
 #' @export
-#'
-get_dependencies <- function(dir = ".") {
-  appDependencies <- packrat:::appDependencies
-used_pkgs <- appDependencies(dir)
-pkgs <- unlist(used_pkgs)
-pkgs <- pkgs[order(pkgs)]
-paste0(pkgs, collapse = ",")
+get_dependencies <- function(
+  path = getwd(),
+  just_packages = FALSE
+) {
+  
+  # check if directory or single file
+  if (utils::file_test("-d", path)) {
+    # if directory, search for all possible R or Rmd files
+    pattern <- "\\.[rR]$|\\.[rR]md$|\\.[rR]nw$|\\.[rR]pres$"
+    R_files <- list.files(
+      path,
+      pattern = pattern,
+      ignore.case = TRUE,
+      recursive = TRUE,
+      full.names = TRUE
+    )
+  } else if (utils::file_test("-f", path)) {
+    # if file, just copy it into the files list
+    R_files <- path
+  } else {
+    # stop if path doesn't exist at all
+    stop("File or directory doesn't exist.")
+  }
+  
+  # loop over every file
+  pkgs <- lapply(
+    R_files,
+    function(y) {
+      # read files libe by line
+      current_file <- readLines(y)
+      # get libraries explicitly called via library()
+      library_lines <- grep(pattern = "library", x = current_file, value = TRUE)
+      l_libs <- strsplit(library_lines, split = "library\\(")
+      l_libs <- lapply(l_libs, function(x){strsplit(x[2], split = "\\)")})
+      l_libs <- unlist(l_libs)
+      # get libraries explicitly called via require()
+      require_lines <- grep(pattern = "require", x = current_file, value = TRUE)
+      r_libs <- strsplit(require_lines, split = "require\\(")
+      r_libs <- lapply(r_libs, function(x){strsplit(x[2], split = "\\)")})
+      r_libs <- unlist(r_libs)
+      # get libraries implicitly called via ::
+      point_lines <- grep(pattern = "::", x = current_file, value = TRUE)
+      # search for all collections of alphanumeric signs in between the
+      # line start/a non-alphanumeric sign and ::
+      p_libs <- regmatches(
+        point_lines,
+        gregexpr("(?<=^|[^a-zA-Z0-9])[a-zA-Z0-9]*?(?=::)", point_lines, perl = TRUE)
+      )
+      p_libs <- unlist(p_libs)
+      # merge results for current file
+      res <- c(l_libs, r_libs, p_libs)
+      return(unique(res))
+    }
+  )
+  
+  # merge results of every file
+  pkgs <- unique(unlist(pkgs))
+  # remove NA and empty string
+  pkgs <- pkgs[pkgs != "" & !is.na(pkgs)]
+  # order alphabetically
+  pkgs <- sort(pkgs)
+  
+  # remove packages that are not on CRAN
+  # TODO: keep an eye on that one: https://github.com/ropenscilabs/available
+  if (curl::has_internet()==TRUE & RCurl::url.exists("https://cran.r-project.org") ==TRUE ) {
+    pkgs <- pkgs[pkgs %in% utils::available.packages(repos = "https://cran.r-project.org")[,1]==TRUE]
+  }
+  
+  # if the just_packages option is selected, just give back the list of packages
+  if (just_packages) {
+    return(pkgs)
+  }
+  
+  
+  # create string with missing packages and their version number in correct layout
+  to_add_version <- unlist(lapply(
+    pkgs,
+    function(x) {
+      # check if package is installed
+      if(x %in% rownames(installed.packages())) {
+        paste0(x, " (>= ", utils::packageDescription(x)$Version, ")")
+      } else {x}
+    }
+  ))
+  to_add_final <- paste0("\n    ", paste0(to_add_version, collapse = ",\n    "))
+  return(to_add_final)
 }
-
-# TODO: I am just importing something from packat for the sake of importing
-# What I really need is the internal function called appDependencies

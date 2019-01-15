@@ -1,4 +1,4 @@
-#' Creates a description file for a compendium
+#' Creates a DESCRIPTION file for a compendium
 #'
 #' @param Type Default here is compendium
 #' @param Package  Name of your project

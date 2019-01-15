@@ -1,7 +1,7 @@
 
 # Hole punch
 
- ![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
+ ![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)  [![Launch Rstudio binder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/benmarwick/holepunch/master?urlpath=rstudio) 
 
 This helper R package is designed to make your R project or  compendium binder ready. It provides some very simple functionality to:
 

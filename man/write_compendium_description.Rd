@@ -2,7 +2,7 @@
 % Please edit documentation in R/write_compendium_description.R
 \name{write_compendium_description}
 \alias{write_compendium_description}
-\title{Creates a description file for a compendium}
+\title{Creates a DESCRIPTION file for a compendium}
 \usage{
 write_compendium_description(Type = "Compendium",
   Package = "Compendium title", Version = "0.0.1", path = ".")
@@ -17,5 +17,5 @@ write_compendium_description(Type = "Compendium",
 \item{path}{path to project (in case it is elsewhere)}
 }
 \description{
-Creates a description file for a compendium
+Creates a DESCRIPTION file for a compendium
 }
